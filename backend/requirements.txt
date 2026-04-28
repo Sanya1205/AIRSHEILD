@@ -1,0 +1,16 @@
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+pydantic==2.7.0
+
+# HTTP client (async, used for all external API calls)
+httpx==0.27.0
+
+# ML / data
+scikit-learn==1.5.0
+pandas==2.2.2
+numpy==1.26.4
+prophet==1.1.5   # optional — LinearRegression fallback used if not installed
+
+# Config
+python-dotenv==1.0.1
