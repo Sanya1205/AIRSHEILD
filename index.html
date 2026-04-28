@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AirShield Routes India | Atmospheric Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+tailwind.config = {
+  darkMode:"class",
+  theme:{extend:{colors:{
+    "surface":"#0a0f14","surface-container":"#141a20","surface-container-low":"#0e1419",
+    "surface-container-high":"#1a2027","surface-variant":"#1f262e","surface-bright":"#252d35",
+    "primary":"#99f7ff","primary-dim":"#00e2ee","primary-container":"#00f1fe",
+    "on-primary-fixed":"#004145","on-primary-container":"#00555a",
+    "tertiary":"#8eff71","tertiary-dim":"#2be800",
+    "error":"#ff716c","error-container":"#9f0519",
+    "secondary":"#d6e4f9","secondary-container":"#3a4859",
+    "on-surface":"#eaeef5","on-surface-variant":"#a7abb2",
+    "outline":"#71767c","outline-variant":"#43484e",
+  },fontFamily:{headline:["Plus Jakarta Sans"],body:["Inter"],label:["Manrope"]},
+  borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"}}}
+}
+</script>
+<style>
+*{box-sizing:border-box}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;display:inline-block;line-height:1;vertical-align:middle}
+.glass{background:rgba(20,26,32,0.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.glow-btn{background:linear-gradient(135deg,#99f7ff,#00e2ee);box-shadow:0 0 20px rgba(0,241,254,0.2);transition:all .3s}
+.glow-btn:hover{box-shadow:0 0 32px rgba(0,241,254,0.4);transform:translateY(-1px)}
+.page{display:none}.page.active{display:flex}
+.nav-item.active{color:#99f7ff;background:rgba(0,229,238,0.1)}
+.nav-item:hover{color:#e0f7ff;background:rgba(255,255,255,0.05)}
+.aqi-bar{height:6px;border-radius:3px;background:linear-gradient(90deg,#22c55e 0%,#eab308 33%,#f97316 55%,#ef4444 75%,#a855f7 90%,#7c3aed 100%)}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.animate-marquee{animation:marquee 30s linear infinite}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease forwards}
+.route-card{transition:all .3s;border:1px solid rgba(67,72,78,.15)}
+.route-card:hover{border-color:rgba(153,247,255,.25);box-shadow:0 0 24px rgba(0,241,254,0.08)}
+#map{border-radius:1rem;z-index:0}
+.spinner{border:2px solid rgba(153,247,255,.1);border-top-color:#99f7ff;border-radius:50%;animation:spin .8s linear infinite;width:20px;height:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.forecast-bar{transition:height .5s ease}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{position:fixed;inset:0;z-index:200;background:#0a0f14;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#auth-screen.hidden{display:none}
+.auth-bg-glow{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none}
+.auth-tab{transition:all .25s;border-bottom:2px solid transparent;padding-bottom:6px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:#71767c;cursor:pointer}
+.auth-tab.active{color:#99f7ff;border-color:#99f7ff}
+.auth-input{width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(67,72,78,.5);border-radius:.75rem;padding:.65rem 1rem .65rem 2.6rem;font-size:.85rem;color:#eaeef5;outline:none;transition:border-color .2s;font-family:'Inter',sans-serif}
+.auth-input:focus{border-color:rgba(153,247,255,.4)}
+.auth-input::placeholder{color:#43484e}
+.auth-divider{display:flex;align-items:center;gap:12px;color:#43484e;font-size:.7rem;font-family:'Manrope',sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:rgba(67,72,78,.4)}
+.social-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:.6rem 1rem;border:1px solid rgba(67,72,78,.4);border-radius:.75rem;background:rgba(20,26,32,.5);color:#a7abb2;font-size:.8rem;font-family:'Manrope',sans-serif;font-weight:600;cursor:pointer;transition:all .2s}
+.social-btn:hover{border-color:rgba(153,247,255,.3);color:#eaeef5}
+.auth-error{background:rgba(159,5,25,.15);border:1px solid rgba(255,113,108,.25);border-radius:.5rem;padding:.5rem .75rem;font-size:.75rem;color:#ff716c;font-family:'Manrope',sans-serif;display:none}
+.auth-error.show{display:block}
+@keyframes authIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.auth-card{animation:authIn .5s cubic-bezier(.16,1,.3,1) forwards}
+.strength-bar{height:3px;border-radius:2px;transition:width .3s,background .3s}
+
+/* ── PROFILE PAGE ── */
+.profile-avatar-ring{background:conic-gradient(#99f7ff 0%,#8eff71 40%,#99f7ff 100%);border-radius:50%;padding:3px}
+.stat-chip{background:rgba(20,26,32,.7);border:1px solid rgba(67,72,78,.2);border-radius:1rem;padding:.75rem 1.25rem;text-align:center}
+.toggle-switch{position:relative;width:36px;height:20px;display:inline-block}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:rgba(67,72,78,.5);border-radius:10px;cursor:pointer;transition:.3s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#a7abb2;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:rgba(0,241,254,.3);border:1px solid rgba(0,241,254,.5)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(16px);background:#99f7ff}
+</style>
+</head>
+<body class="bg-surface text-on-surface font-body">
+
+
+
+<!-- ═══════════════ AUTH SCREEN ═══════════════ -->
+<div id="auth-screen" style="position:fixed;inset:0;z-index:200;background:#0a0f14;display:flex;align-items:center;justify-content:center;overflow:hidden">
+  <div class="auth-bg-glow" style="width:600px;height:600px;background:rgba(0,241,254,.06);top:-200px;right:-100px;position:absolute;border-radius:50%;filter:blur(120px)"></div>
+  <div class="auth-bg-glow" style="width:400px;height:400px;background:rgba(142,255,113,.04);bottom:-100px;left:-80px;position:absolute;border-radius:50%;filter:blur(120px)"></div>
+
+  <!-- Ambient particle dots -->
+  <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+    <div style="position:absolute;width:2px;height:2px;background:#99f7ff;border-radius:50%;opacity:.3;top:15%;left:20%;animation:pulse-dot 3s ease-in-out infinite"></div>
+    <div style="position:absolute;width:2px;height:2px;background:#8eff71;border-radius:50%;opacity:.25;top:70%;left:75%;animation:pulse-dot 4s ease-in-out infinite .8s"></div>
+    <div style="position:absolute;width:1px;height:1px;background:#99f7ff;border-radius:50%;opacity:.4;top:40%;left:85%;animation:pulse-dot 2.5s ease-in-out infinite 1.2s"></div>
+    <div style="position:absolute;width:2px;height:2px;background:#00f1fe;border-radius:50%;opacity:.2;top:80%;left:25%;animation:pulse-dot 3.5s ease-in-out infinite .4s"></div>
+  </div>
+
+  <div class="auth-card w-full relative z-10" style="max-width:400px;margin:0 1rem">
+    <div class="text-center mb-8">
+      <div style="display:inline-block;margin-bottom:1rem">
+        <svg width="56" height="60" viewBox="0 0 308 348" xmlns="http://www.w3.org/2000/svg">
+          <defs><clipPath id="ac"><path d="M154 8 L262 50 L262 172 Q262 250 154 298 Q46 250 46 172 L46 50 Z"/></clipPath></defs>
+          <path d="M154 8 L270 54 L270 178 Q270 264 154 314 Q38 264 38 178 L38 54 Z" fill="#0a1628" stroke="#1e3a5f" stroke-width="1"/>
+          <path d="M154 20 L258 62 L258 174 Q258 252 154 298 Q50 252 50 174 L50 62 Z" fill="#0d1f3c"/>
+          <g clip-path="url(#ac)">
+            <ellipse cx="154" cy="270" rx="118" ry="46" fill="none" stroke="#ef4444" stroke-width="15" opacity="0.20"/>
+            <ellipse cx="154" cy="270" rx="91"  ry="36" fill="none" stroke="#f97316" stroke-width="12" opacity="0.25"/>
+            <ellipse cx="154" cy="270" rx="67"  ry="27" fill="none" stroke="#eab308" stroke-width="10" opacity="0.30"/>
+            <ellipse cx="154" cy="270" rx="46"  ry="19" fill="none" stroke="#22c55e" stroke-width="8"  opacity="0.45"/>
+            <ellipse cx="154" cy="270" rx="27"  ry="11" fill="none" stroke="#00f1fe" stroke-width="6"  opacity="0.70"/>
+          </g>
+          <g transform="translate(154,174)">
+            <line x1="-22" y1="30" x2="0" y2="-22" stroke="#99f7ff" stroke-width="4" stroke-linecap="round"/>
+            <line x1="22"  y1="30" x2="0" y2="-22" stroke="#99f7ff" stroke-width="4" stroke-linecap="round"/>
+            <line x1="-11" y1="10" x2="11" y2="10" stroke="#99f7ff" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="0" y1="-22" x2="0" y2="-50" stroke="#00f1fe" stroke-width="3" stroke-linecap="round"/>
+            <polyline points="-5,-43 0,-56 5,-43" fill="none" stroke="#00f1fe" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <path d="M154 8 L270 54 L270 178 Q270 264 154 314 Q38 264 38 178 L38 54 Z" fill="none" stroke="#99f7ff" stroke-width="1.5" opacity="0.35"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-extrabold tracking-tighter text-primary font-headline">AirShield</h1>
+      <p style="font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:#4a5568;font-family:'Manrope',sans-serif;margin-top:.25rem">Atmospheric Intelligence</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-6 mb-6" style="border-bottom:1px solid rgba(67,72,78,.3);padding-bottom:0">
+      <button id="tab-signin" class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+      <button id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- SIGN IN FORM -->
+    <div id="form-signin">
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">mail</span>
+          <input id="si-email" class="auth-input" type="email" placeholder="Email address"/>
+        </div>
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">lock</span>
+          <input id="si-password" class="auth-input" type="password" placeholder="Password" style="padding-right:2.8rem"/>
+          <button onclick="togglePwd('si-password',this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#71767c;cursor:pointer;padding:0">
+            <span class="material-symbols-outlined" style="font-size:1rem">visibility</span>
+          </button>
+        </div>
+      </div>
+      <div id="si-error" class="auth-error" style="margin-bottom:.75rem">Incorrect credentials. Demo: <b>demo@airshield.in</b> / <b>demo123</b></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+        <button style="font-size:.75rem;color:#99f7ff;font-family:'Manrope',sans-serif;background:none;border:none;cursor:pointer">Forgot password?</button>
+      </div>
+      <button onclick="handleSignIn()" class="glow-btn" style="width:100%;padding:.75rem;border-radius:.75rem;color:#004145;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.875rem;border:none;cursor:pointer;margin-bottom:1rem">
+        Sign In
+      </button>
+      <div class="auth-divider" style="margin-bottom:1rem">or continue with</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem">
+        <button class="social-btn" onclick="handleSocialLogin('Google')">
+          <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google
+        </button>
+        <button class="social-btn" onclick="handleSocialLogin('GitHub')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </button>
+      </div>
+      <p style="text-align:center;font-size:.75rem;color:#71767c;font-family:'Manrope',sans-serif">
+        Demo: <span style="color:#99f7ff;cursor:pointer" onclick="fillDemo()">click to fill credentials</span>
+      </p>
+    </div>
+
+    <!-- SIGN UP FORM -->
+    <div id="form-signup" class="hidden">
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem">
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">person</span>
+          <input id="su-name" class="auth-input" type="text" placeholder="Full name"/>
+        </div>
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">mail</span>
+          <input id="su-email" class="auth-input" type="email" placeholder="Email address"/>
+        </div>
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">location_city</span>
+          <select id="su-city" class="auth-input" style="padding-left:2.6rem;appearance:none">
+            <option value="">Select home city</option>
+            <option>Delhi</option><option>Gurgaon</option><option>Noida</option>
+            <option>Mumbai</option><option>Bengaluru</option><option>Chennai</option>
+            <option>Kolkata</option><option>Hyderabad</option><option>Pune</option><option>Jaipur</option>
+          </select>
+        </div>
+        <div style="position:relative">
+          <span class="material-symbols-outlined" style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#71767c;font-size:1rem">lock</span>
+          <input id="su-password" class="auth-input" type="password" placeholder="Create password" oninput="checkStrength(this.value)" style="padding-right:2.8rem"/>
+          <button onclick="togglePwd('su-password',this)" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:#71767c;cursor:pointer;padding:0">
+            <span class="material-symbols-outlined" style="font-size:1rem">visibility</span>
+          </button>
+        </div>
+        <div style="padding:0 .25rem">
+          <div style="display:flex;gap:.25rem;margin-bottom:.35rem">
+            <div id="str-1" style="flex:1;height:3px;border-radius:2px;background:rgba(67,72,78,.3);transition:background .3s"></div>
+            <div id="str-2" style="flex:1;height:3px;border-radius:2px;background:rgba(67,72,78,.3);transition:background .3s"></div>
+            <div id="str-3" style="flex:1;height:3px;border-radius:2px;background:rgba(67,72,78,.3);transition:background .3s"></div>
+            <div id="str-4" style="flex:1;height:3px;border-radius:2px;background:rgba(67,72,78,.3);transition:background .3s"></div>
+          </div>
+          <p id="str-label" style="font-size:.65rem;font-family:'Manrope',sans-serif;color:#71767c"></p>
+        </div>
+      </div>
+      <div id="su-error" class="auth-error" style="margin-bottom:.75rem">Please fill all fields correctly.</div>
+      <button onclick="handleSignUp()" class="glow-btn" style="width:100%;padding:.75rem;border-radius:.75rem;color:#004145;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.875rem;border:none;cursor:pointer;margin-bottom:.75rem">
+        Create Account
+      </button>
+      <p style="text-align:center;font-size:.65rem;color:#71767c;font-family:'Manrope',sans-serif">By signing up you agree to our <span style="color:#99f7ff;cursor:pointer">Terms</span> and <span style="color:#99f7ff;cursor:pointer">Privacy Policy</span>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-slate-950/80 backdrop-blur-xl border-r border-slate-800/40 flex flex-col">
+  <div class="p-5 pb-3">
+    <div class="flex items-center gap-3">
+      <!-- Inline SVG logo mark (shield only, no wordmark) -->
+      <svg width="36" height="38" viewBox="0 0 308 348" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <defs>
+          <clipPath id="sc">
+            <path d="M154 8 L262 50 L262 172 Q262 250 154 298 Q46 250 46 172 L46 50 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M154 8 L270 54 L270 178 Q270 264 154 314 Q38 264 38 178 L38 54 Z" fill="#0a1628" stroke="#1e3a5f" stroke-width="1"/>
+        <path d="M154 20 L258 62 L258 174 Q258 252 154 298 Q50 252 50 174 L50 62 Z" fill="#0d1f3c"/>
+        <g clip-path="url(#sc)">
+          <ellipse cx="154" cy="270" rx="118" ry="46" fill="none" stroke="#ef4444" stroke-width="15" opacity="0.20"/>
+          <ellipse cx="154" cy="270" rx="91"  ry="36" fill="none" stroke="#f97316" stroke-width="12" opacity="0.25"/>
+          <ellipse cx="154" cy="270" rx="67"  ry="27" fill="none" stroke="#eab308" stroke-width="10" opacity="0.30"/>
+          <ellipse cx="154" cy="270" rx="46"  ry="19" fill="none" stroke="#22c55e" stroke-width="8"  opacity="0.45"/>
+          <ellipse cx="154" cy="270" rx="27"  ry="11" fill="none" stroke="#00f1fe" stroke-width="6"  opacity="0.70"/>
+        </g>
+        <g transform="translate(154,174)">
+          <line x1="-22" y1="30" x2="0" y2="-22" stroke="#99f7ff" stroke-width="4" stroke-linecap="round"/>
+          <line x1="22"  y1="30" x2="0" y2="-22" stroke="#99f7ff" stroke-width="4" stroke-linecap="round"/>
+          <line x1="-11" y1="10" x2="11" y2="10" stroke="#99f7ff" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="0" y1="-22" x2="0" y2="-50" stroke="#00f1fe" stroke-width="3" stroke-linecap="round"/>
+          <polyline points="-5,-43 0,-56 5,-43" fill="none" stroke="#00f1fe" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <path d="M154 8 L270 54 L270 178 Q270 264 154 314 Q38 264 38 178 L38 54 Z" fill="none" stroke="#99f7ff" stroke-width="1.5" opacity="0.35"/>
+      </svg>
+      <div>
+        <h1 class="text-lg font-extrabold tracking-tighter text-primary font-headline leading-none">AirShield</h1>
+        <p class="text-[8px] uppercase tracking-[.22em] text-slate-500 font-label mt-0.5">Atmospheric Intelligence</p>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 space-y-1">
+    <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline transition-all">
+      <span class="material-symbols-outlined text-base">dashboard</span>Dashboard
+    </button>
+    <button onclick="navigate('planner')" data-page="planner" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline text-slate-400 transition-all">
+      <span class="material-symbols-outlined text-base">route</span>Route Planner
+    </button>
+    <button onclick="navigate('analytics')" data-page="analytics" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline text-slate-400 transition-all">
+      <span class="material-symbols-outlined text-base">analytics</span>Analytics
+    </button>
+    <button onclick="navigate('hotspots')" data-page="hotspots" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline text-slate-400 transition-all">
+      <span class="material-symbols-outlined text-base">location_on</span>Hotspots
+    </button>
+    <button onclick="navigate('history')" data-page="history" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline text-slate-400 transition-all">
+      <span class="material-symbols-outlined text-base">history</span>History
+    </button>
+
+    <div style="height:1px;background:rgba(67,72,78,.25);margin:.5rem .5rem"></div>
+
+    <button onclick="navigate('profile')" data-page="profile" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium font-headline text-slate-400 transition-all">
+      <span class="material-symbols-outlined text-base">account_circle</span>My Profile
+    </button>
+  </nav>
+  <div class="p-4">
+    <button onclick="navigate('planner')" class="glow-btn w-full py-3 rounded-xl text-on-primary-fixed font-bold font-headline text-sm flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-sm">add_road</span>New Route
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════════ TOP BAR ═══════════════ -->
+<header class="fixed top-0 left-64 right-0 h-14 z-40 bg-slate-950/70 backdrop-blur-md border-b border-slate-800/30 flex items-center justify-between px-6">
+  <div class="relative">
+    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
+    <input id="search-input" class="bg-black/40 border border-slate-800/50 rounded-full py-1.5 pl-9 pr-4 text-xs focus:ring-1 focus:ring-primary/40 w-56 placeholder:text-slate-600" placeholder="Search cities..." type="text"/>
+  </div>
+  <div class="flex items-center gap-4">
+    <div id="api-status" class="flex items-center gap-2 text-xs font-label">
+      <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+      <span class="text-slate-500">Connecting to ML API…</span>
+    </div>
+    <div class="w-7 h-7 rounded-full bg-slate-700 border border-cyan-400/20 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all" onclick="navigate('profile')" title="My Profile">
+      <div id="topbar-avatar" class="w-full h-full bg-gradient-to-br from-cyan-400/30 to-purple-400/20 flex items-center justify-center text-xs font-bold text-primary">U</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main class="ml-64 pt-14 min-h-screen">
+
+  <!-- ─── DASHBOARD PAGE ─── -->
+  <div id="page-dashboard" class="page active flex-col">
+    <!-- AQI Ticker -->
+    <div class="overflow-hidden border-b border-slate-800/40 py-2 bg-surface-container-low">
+      <div class="flex animate-marquee whitespace-nowrap gap-16" id="ticker-bar">
+        <span class="text-xs font-label text-slate-600 uppercase tracking-widest">Loading live AQI data…</span>
+      </div>
+    </div>
+
+    <div class="p-6 space-y-6 max-w-7xl">
+      <!-- Stats Row -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-3">Delhi AQI (Live)</p>
+          <div class="flex items-end gap-2">
+            <span id="dash-aqi" class="text-5xl font-headline font-black text-error">–</span>
+            <span id="dash-cat" class="text-sm font-bold font-label text-error mb-1">–</span>
+          </div>
+          <div class="aqi-bar mt-3 relative"><div id="dash-needle" class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white border-2 border-slate-900 shadow-lg" style="left:65%"></div></div>
+          <p id="dash-source" class="text-[10px] text-slate-500 mt-2 font-label">Connecting to live data…</p>
+        </div>
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-3">Optimal Departure</p>
+          <div id="dash-departure" class="text-4xl font-headline font-black text-primary">–</div>
+          <p class="text-[10px] text-slate-500 mt-2 font-label">ML-predicted lowest AQI window <span id="dash-dep-src" class="text-slate-600"></span></p>
+        </div>
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-3">Active Hotspots</p>
+          <div id="dash-hotspots" class="text-4xl font-headline font-black text-on-surface">–</div>
+          <p class="text-[10px] text-slate-500 mt-2 font-label">DBSCAN-detected clusters · Delhi NCR</p>
+        </div>
+      </div>
+
+      <!-- City Grid -->
+      <div>
+        <h2 class="text-lg font-headline font-bold mb-3 text-on-surface">Live City Dashboard</h2>
+        <div class="grid grid-cols-4 gap-3" id="city-grid"></div>
+      </div>
+
+      <!-- 24h Forecast Chart -->
+      <div class="glass rounded-2xl p-6 border border-slate-800/30">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="font-headline font-bold text-on-surface">24-Hour AQI Forecast</h3>
+            <p class="text-[10px] text-slate-500 font-label uppercase tracking-widest">Prophet ML Model · Delhi NCR</p>
+          </div>
+          <div id="forecast-loading" class="spinner"></div>
+        </div>
+        <div id="forecast-chart" class="flex items-end gap-1 h-32 px-2"></div>
+        <div class="flex justify-between text-[9px] font-label text-slate-600 mt-1 px-2">
+          <span>Now</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ROUTE PLANNER PAGE ─── -->
+  <div id="page-planner" class="page flex-col">
+    <div class="p-6 max-w-7xl w-full">
+      <p class="text-[9px] font-label uppercase tracking-[.25em] text-primary mb-1">ML Route Optimizer</p>
+      <h1 class="text-3xl font-headline font-extrabold mb-6">Find Cleanest Route</h1>
+
+      <div class="grid grid-cols-12 gap-6">
+        <!-- Input Panel -->
+        <div class="col-span-4 space-y-4">
+          <div class="glass rounded-2xl p-5 border border-slate-800/30 space-y-4">
+            <div>
+              <label class="text-[9px] font-label uppercase tracking-widest text-slate-500 block mb-1.5">From</label>
+              <div class="flex items-center bg-black/40 rounded-xl px-3 py-2.5 border border-slate-800/50 focus-within:border-primary/40">
+                <span class="material-symbols-outlined text-slate-500 mr-2 text-sm">my_location</span>
+                <select id="origin-select" class="bg-transparent border-none text-sm focus:ring-0 w-full text-on-surface">
+                  <option value="">Select origin city</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="text-[9px] font-label uppercase tracking-widest text-slate-500 block mb-1.5">To</label>
+              <div class="flex items-center bg-black/40 rounded-xl px-3 py-2.5 border border-slate-800/50 focus-within:border-primary/40">
+                <span class="material-symbols-outlined text-slate-500 mr-2 text-sm">location_on</span>
+                <select id="dest-select" class="bg-transparent border-none text-sm focus:ring-0 w-full text-on-surface">
+                  <option value="">Select destination</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Health Profile -->
+            <div class="border-t border-slate-800/40 pt-3">
+              <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-2">Health Profile</p>
+              <div class="grid grid-cols-2 gap-2 text-xs font-label">
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="hc-asthma" class="rounded border-slate-700 bg-black/40 accent-cyan-400"> Asthma</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="hc-heart" class="rounded border-slate-700 bg-black/40 accent-cyan-400"> Heart Disease</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="hc-elderly" class="rounded border-slate-700 bg-black/40 accent-cyan-400"> Elderly (65+)</label>
+                <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="hc-child" class="rounded border-slate-700 bg-black/40 accent-cyan-400"> Child (&lt;12)</label>
+              </div>
+              <div class="mt-2">
+                <label class="text-[9px] font-label text-slate-500">Activity Level</label>
+                <select id="activity-select" class="mt-1 w-full bg-black/40 border border-slate-800/50 rounded-lg px-2 py-1.5 text-xs text-on-surface">
+                  <option value="low">Low (walking)</option>
+                  <option value="moderate" selected>Moderate (commute)</option>
+                  <option value="high">High (exercise)</option>
+                </select>
+              </div>
+            </div>
+
+            <button onclick="findRoute()" class="glow-btn w-full py-3 rounded-xl text-on-primary-fixed font-bold font-headline text-sm flex items-center justify-center gap-2">
+              <span id="route-btn-icon" class="material-symbols-outlined text-sm">route</span>
+              <span id="route-btn-text">Find Best Route</span>
+            </button>
+          </div>
+
+          <!-- Health Alert Panel -->
+          <div id="health-panel" class="glass rounded-2xl p-5 border border-slate-800/30 hidden fade-in">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-base" id="health-icon">favorite</span>
+              <h4 class="font-headline font-bold text-sm">Health Assessment</h4>
+            </div>
+            <div id="health-risk" class="text-2xl font-black font-headline mb-1"></div>
+            <div id="health-recs" class="space-y-1.5 text-xs text-slate-400 font-label"></div>
+          </div>
+        </div>
+
+        <!-- Map + Results -->
+        <div class="col-span-8 space-y-4">
+          <div class="glass rounded-2xl overflow-hidden border border-slate-800/30" style="height:380px">
+            <div id="map" style="height:100%;width:100%"></div>
+          </div>
+
+          <!-- Route Cards -->
+          <div id="route-results" class="space-y-3 hidden fade-in"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ANALYTICS PAGE ─── -->
+  <div id="page-analytics" class="page flex-col">
+    <div class="p-6 max-w-7xl w-full space-y-6">
+      <div>
+        <p class="text-[9px] font-label uppercase tracking-[.25em] text-primary mb-1">ML Intelligence Suite</p>
+        <h1 class="text-3xl font-headline font-extrabold">Route Analytics</h1>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-2">National Avg AQI</p>
+          <div class="text-4xl font-black font-headline text-yellow-400">94</div>
+          <p class="text-[10px] text-slate-500 mt-1 font-label">Moderate · 15-city average</p>
+        </div>
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-2">Routes Optimized Today</p>
+          <div class="text-4xl font-black font-headline text-primary">2,847</div>
+          <p class="text-[10px] text-slate-500 mt-1 font-label">+18% from yesterday</p>
+        </div>
+        <div class="glass rounded-2xl p-5 border border-slate-800/30">
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-2">Avg Exposure Saved</p>
+          <div class="text-4xl font-black font-headline text-tertiary">23%</div>
+          <p class="text-[10px] text-slate-500 mt-1 font-label">vs. standard GPS routing</p>
+        </div>
+      </div>
+
+      <!-- Multi-city comparison -->
+      <div class="glass rounded-2xl p-6 border border-slate-800/30">
+        <h3 class="font-headline font-bold mb-4">City AQI Comparison</h3>
+        <div id="city-comparison" class="space-y-3"></div>
+      </div>
+
+      <!-- PM2.5 vs PM10 breakdown -->
+      <div class="glass rounded-2xl p-6 border border-slate-800/30">
+        <h3 class="font-headline font-bold mb-1">Pollutant Breakdown</h3>
+        <p class="text-[10px] text-slate-500 font-label uppercase tracking-widest mb-4">PM2.5 vs PM10 · Major Cities</p>
+        <div id="pollutant-chart" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HOTSPOTS PAGE ─── -->
+  <div id="page-hotspots" class="page flex-col">
+    <div class="p-6 max-w-7xl w-full space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[9px] font-label uppercase tracking-[.25em] text-primary mb-1">DBSCAN ML Detection</p>
+          <h1 class="text-3xl font-headline font-extrabold">Pollution Hotspots</h1>
+        </div>
+        <select id="hotspot-city" onchange="loadHotspots()" class="bg-surface-container border border-slate-700/50 rounded-xl px-4 py-2 text-sm text-on-surface font-label">
+          <option>Delhi</option><option>Mumbai</option><option>Bengaluru</option>
+          <option>Kolkata</option><option>Chennai</option><option>Hyderabad</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-12 gap-4">
+        <div class="col-span-8">
+          <div class="glass rounded-2xl overflow-hidden border border-slate-800/30" style="height:450px">
+            <div id="hotspot-map" style="height:100%;width:100%"></div>
+          </div>
+        </div>
+        <div class="col-span-4 space-y-3">
+          <div id="hotspot-list" class="space-y-3">
+            <div class="glass rounded-xl p-4 border border-slate-800/30">
+              <div class="spinner mx-auto"></div>
+              <p class="text-xs text-slate-500 text-center mt-2 font-label">Loading DBSCAN clusters…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── HISTORY PAGE ─── -->
+  <div id="page-history" class="page flex-col">
+    <div class="p-6 max-w-5xl w-full">
+      <p class="text-[9px] font-label uppercase tracking-[.25em] text-primary mb-1">Chronology</p>
+      <h1 class="text-3xl font-headline font-extrabold mb-6">Route History</h1>
+      <div class="space-y-4" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- ─── PROFILE PAGE ─── -->
+  <div id="page-profile" class="page flex-col">
+    <div class="p-6 max-w-4xl w-full space-y-6">
+      <div>
+        <p class="text-[9px] font-label uppercase tracking-[.25em] text-primary mb-1">Account</p>
+        <h1 class="text-3xl font-headline font-extrabold">My Profile</h1>
+      </div>
+
+      <!-- Hero card -->
+      <div class="glass rounded-2xl p-6 border border-slate-800/30 relative overflow-hidden">
+        <!-- background glow -->
+        <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:rgba(0,241,254,.05);border-radius:50%;filter:blur(60px);pointer-events:none"></div>
+        <div class="flex items-center gap-6">
+          <!-- Avatar ring -->
+          <div class="profile-avatar-ring" style="flex-shrink:0">
+            <div id="profile-avatar-circle" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(153,247,255,.15),rgba(142,255,113,.1));border:2px solid #0a0f14;display:flex;align-items:center;justify-content:center">
+              <span id="profile-avatar-initials" class="font-headline font-black text-2xl text-primary">DM</span>
+            </div>
+          </div>
+          <div class="flex-1">
+            <h2 id="profile-name" class="text-2xl font-headline font-bold text-on-surface">Demo User</h2>
+            <p id="profile-email-display" class="text-sm text-slate-400 font-label mt-0.5">demo@airshield.in</p>
+            <div class="flex items-center gap-3 mt-2">
+              <span class="badge-pill" style="background:rgba(142,255,113,.1);color:#8eff71;border:1px solid rgba(142,255,113,.25)">
+                <span class="material-symbols-outlined" style="font-size:.7rem">verified</span> Pro Member
+              </span>
+              <span id="profile-city-badge" class="badge-pill" style="background:rgba(153,247,255,.08);color:#99f7ff;border:1px solid rgba(153,247,255,.2)">
+                <span class="material-symbols-outlined" style="font-size:.7rem">location_on</span> Delhi
+              </span>
+            </div>
+          </div>
+          <button onclick="handleSignOut()" style="display:flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:.75rem;border:1px solid rgba(255,113,108,.3);background:rgba(255,113,108,.06);color:#ff716c;font-size:.75rem;font-family:'Manrope',sans-serif;font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,113,108,.12)'" onmouseout="this.style.background='rgba(255,113,108,.06)'">
+            <span class="material-symbols-outlined" style="font-size:.9rem">logout</span> Sign Out
+          </button>
+        </div>
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-4 gap-3 mt-6">
+          <div class="stat-chip">
+            <div class="text-2xl font-headline font-black text-primary" id="stat-routes">12</div>
+            <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mt-1">Routes Taken</p>
+          </div>
+          <div class="stat-chip">
+            <div class="text-2xl font-headline font-black text-tertiary">23%</div>
+            <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mt-1">Avg Exposure Saved</p>
+          </div>
+          <div class="stat-chip">
+            <div class="text-2xl font-headline font-black text-on-surface">342</div>
+            <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mt-1">km Clean Routes</p>
+          </div>
+          <div class="stat-chip">
+            <div class="text-2xl font-headline font-black" style="color:#eab308">14</div>
+            <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mt-1">Days Active</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <!-- Personal Info -->
+        <div class="profile-section">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-headline font-bold text-on-surface">Personal Information</h3>
+            <button onclick="toggleEditMode()" id="edit-btn" style="display:flex;align-items:center;gap:.3rem;font-size:.75rem;color:#99f7ff;font-family:'Manrope',sans-serif;font-weight:600;background:none;border:none;cursor:pointer">
+              <span class="material-symbols-outlined" style="font-size:.9rem">edit</span> Edit
+            </button>
+          </div>
+
+          <div class="profile-field">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Full Name</span>
+            <div class="flex items-center gap-2">
+              <span id="pf-name-view" class="text-sm font-label text-on-surface">Demo User</span>
+              <input id="pf-name-edit" class="auth-input hidden" style="padding:.3rem .6rem;font-size:.8rem;width:140px" type="text" value="Demo User"/>
+            </div>
+          </div>
+          <div class="profile-field">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Email</span>
+            <span class="text-sm font-label text-on-surface">demo@airshield.in</span>
+          </div>
+          <div class="profile-field">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Home City</span>
+            <div class="flex items-center gap-2">
+              <span id="pf-city-view" class="text-sm font-label text-on-surface">Delhi</span>
+              <select id="pf-city-edit" class="auth-input hidden" style="padding:.3rem .6rem;font-size:.8rem;width:130px">
+                <option>Delhi</option><option>Gurgaon</option><option>Noida</option>
+                <option>Mumbai</option><option>Bengaluru</option><option>Chennai</option>
+                <option>Kolkata</option><option>Hyderabad</option><option>Pune</option><option>Jaipur</option>
+              </select>
+            </div>
+          </div>
+          <div class="profile-field">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Age</span>
+            <div class="flex items-center gap-2">
+              <span id="pf-age-view" class="text-sm font-label text-on-surface">28</span>
+              <input id="pf-age-edit" class="auth-input hidden" style="padding:.3rem .6rem;font-size:.8rem;width:80px" type="number" value="28" min="1" max="120"/>
+            </div>
+          </div>
+          <div class="profile-field">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Member Since</span>
+            <span class="text-sm font-label text-on-surface">Apr 2025</span>
+          </div>
+
+          <!-- Save button (edit mode only) -->
+          <button id="save-btn" onclick="saveProfile()" class="glow-btn hidden w-full mt-4" style="padding:.6rem;border-radius:.75rem;color:#004145;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:.8rem;border:none;cursor:pointer">
+            Save Changes
+          </button>
+        </div>
+
+        <!-- Health Profile -->
+        <div class="profile-section">
+          <h3 class="font-headline font-bold text-on-surface mb-4">Health Profile</h3>
+          <p class="text-[10px] font-label text-slate-500 mb-4">Used to personalize AQI alerts and route recommendations.</p>
+
+          <div class="space-y-3">
+            <div class="profile-field">
+              <span class="text-sm font-label text-on-surface">Asthma / COPD</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="hp-asthma" onchange="updateHealthBadge()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <span class="text-sm font-label text-on-surface">Heart Disease</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="hp-heart" onchange="updateHealthBadge()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <span class="text-sm font-label text-on-surface">Diabetes</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="hp-diabetes" onchange="updateHealthBadge()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <span class="text-sm font-label text-on-surface">Elderly (65+)</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="hp-elderly" onchange="updateHealthBadge()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <span class="text-sm font-label text-on-surface">Pregnant</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="hp-pregnant" onchange="updateHealthBadge()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field" style="border-bottom:none;padding-bottom:0">
+              <span class="text-sm font-label text-on-surface">Default Activity</span>
+              <select id="hp-activity" class="auth-input" style="padding:.3rem .6rem;font-size:.8rem;width:130px;padding-left:.6rem">
+                <option value="low">Low</option>
+                <option value="moderate" selected>Moderate</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="health-risk-badge" class="mt-4 p-3 rounded-xl" style="background:rgba(153,247,255,.05);border:1px solid rgba(153,247,255,.15)">
+            <p class="text-[9px] font-label uppercase tracking-widest text-slate-500 mb-1">Risk Profile</p>
+            <p id="health-risk-text" class="text-sm font-label text-primary font-semibold">Standard · No elevated conditions</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications & Preferences -->
+      <div class="profile-section">
+        <h3 class="font-headline font-bold text-on-surface mb-4">Notifications & Preferences</h3>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <div class="profile-field">
+              <div>
+                <p class="text-sm font-label text-on-surface">AQI Threshold Alerts</p>
+                <p class="text-[10px] text-slate-500 font-label">Alert when AQI exceeds your safe level</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <div>
+                <p class="text-sm font-label text-on-surface">Daily Forecast Digest</p>
+                <p class="text-[10px] text-slate-500 font-label">Morning AQI summary for your city</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field" style="border-bottom:none;padding-bottom:0">
+              <div>
+                <p class="text-sm font-label text-on-surface">Hotspot Warnings</p>
+                <p class="text-[10px] text-slate-500 font-label">Alert when your route passes a cluster</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="profile-field">
+              <div>
+                <p class="text-sm font-label text-on-surface">Optimal Departure Nudge</p>
+                <p class="text-[10px] text-slate-500 font-label">Remind me of the cleanest travel window</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field">
+              <div>
+                <p class="text-sm font-label text-on-surface">Weekly Exposure Report</p>
+                <p class="text-[10px] text-slate-500 font-label">Summary of your weekly air quality exposure</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="profile-field" style="border-bottom:none;padding-bottom:0">
+              <div>
+                <p class="text-sm font-label text-on-surface">Alert AQI Threshold</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem">
+                <input type="range" id="aqi-threshold" min="50" max="250" value="100" style="width:90px;accent-color:#99f7ff" oninput="document.getElementById('threshold-val').textContent=this.value">
+                <span id="threshold-val" class="text-xs font-headline font-bold text-primary" style="min-width:2rem">100</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="profile-section" style="border-color:rgba(255,113,108,.15)">
+        <h3 class="font-headline font-bold text-error mb-3">Account Actions</h3>
+        <div class="flex gap-3">
+          <button onclick="handleSignOut()" style="display:flex;align-items:center;gap:.4rem;padding:.6rem 1.25rem;border-radius:.75rem;border:1px solid rgba(255,113,108,.3);background:rgba(255,113,108,.06);color:#ff716c;font-size:.8rem;font-family:'Manrope',sans-serif;font-weight:600;cursor:pointer">
+            <span class="material-symbols-outlined" style="font-size:.9rem">logout</span> Sign Out
+          </button>
+          <button style="display:flex;align-items:center;gap:.4rem;padding:.6rem 1.25rem;border-radius:.75rem;border:1px solid rgba(67,72,78,.3);background:transparent;color:#71767c;font-size:.8rem;font-family:'Manrope',sans-serif;font-weight:600;cursor:pointer" onclick="alert('Account deletion requires email confirmation. Feature coming soon.')">
+            <span class="material-symbols-outlined" style="font-size:.9rem">delete</span> Delete Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const API = 'http://localhost:8000/api';
+let _apiOnline = false;
+
+const CITY_COORDS = {
+  "Delhi":[28.6139,77.2090],"Gurgaon":[28.4595,77.0266],"Noida":[28.5355,77.3910],
+  "Faridabad":[28.4082,77.3178],"Ghaziabad":[28.6692,77.4538],
+  "Mumbai":[19.0760,72.8777],"Pune":[18.5204,73.8567],
+  "Bengaluru":[12.9716,77.5946],"Mysore":[12.2958,76.6394],
+  "Chennai":[13.0827,80.2707],"Kolkata":[22.5726,88.3639],
+  "Hyderabad":[17.3850,78.4867],"Jaipur":[26.9124,75.7873],
+  "Ahmedabad":[23.0225,72.5714],"Lucknow":[26.8467,80.9462],"Chandigarh":[30.7333,76.7794],
+};
+
+// Fallback AQI used only when backend AND OpenAQ are both down
+const FALLBACK_AQI = {
+  "Delhi":162,"Gurgaon":145,"Noida":158,"Faridabad":170,"Ghaziabad":155,
+  "Mumbai":82,"Pune":68,"Bengaluru":52,"Mysore":44,"Chennai":71,
+  "Kolkata":118,"Hyderabad":74,"Jaipur":98,"Ahmedabad":105,
+  "Lucknow":134,"Chandigarh":89
+};
+
+// Live AQI cache — populated from backend, updated every 5 min
+let LIVE_AQI = {...FALLBACK_AQI};
+
+// Route history (session)
+const HISTORY = [
+  {origin:"Noida",dest:"Faridabad",date:"Apr 20, 2025 · 08:30 AM",aqi:42,dist:32,saved:12,status:"Good",color:"#8eff71"},
+  {origin:"Mumbai",dest:"Pune",date:"Apr 18, 2025 · 05:45 PM",aqi:154,dist:148,saved:4,status:"Unhealthy",color:"#ff716c"},
+  {origin:"Bengaluru",dest:"Mysore",date:"Apr 16, 2025 · 06:10 AM",aqi:76,dist:144,saved:21,status:"Moderate",color:"#eab308"},
+  {origin:"Delhi",dest:"Gurgaon",date:"Apr 14, 2025 · 09:00 AM",aqi:138,dist:28,saved:18,status:"Unhealthy",color:"#f97316"},
+];
+
+let map = null, hotspotMap = null, routeLayer = null;
+let currentUser = null;
+
+// ═══════════════════════════════════════════
+// AQI HELPERS
+// ═══════════════════════════════════════════
+function aqiColor(aqi) {
+  if(aqi<=50)  return '#22c55e';
+  if(aqi<=100) return '#eab308';
+  if(aqi<=150) return '#f97316';
+  if(aqi<=200) return '#ef4444';
+  if(aqi<=300) return '#a855f7';
+  return '#7c3aed';
+}
+function aqiCat(aqi) {
+  if(aqi<=50)  return 'Good';
+  if(aqi<=100) return 'Moderate';
+  if(aqi<=150) return 'Unhealthy*';
+  if(aqi<=200) return 'Unhealthy';
+  if(aqi<=300) return 'Very Unhealthy';
+  return 'Hazardous';
+}
+
+// ═══════════════════════════════════════════
+// API LAYER — all backend calls go through here
+// ═══════════════════════════════════════════
+async function api(path, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);  // 8s timeout
+  try {
+    const res = await fetch(API + path, {
+      ...opts,
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _apiOnline = true;
+    return data;
+  } catch(e) {
+    clearTimeout(timer);
+    if (!e.message?.includes('abort')) console.warn(`API ${path}:`, e.message);
+    return null;
+  }
+}
+
+function setApiStatus(online, label) {
+  const el = document.getElementById('api-status');
+  if (!el) return;
+  const dot = online
+    ? '<span style="width:8px;height:8px;border-radius:50%;background:#8eff71;display:inline-block;animation:pulse-dot 2s infinite"></span>'
+    : '<span style="width:8px;height:8px;border-radius:50%;background:#eab308;display:inline-block"></span>';
+  el.innerHTML = `${dot}<span style="color:${online?'#a7abb2':'#71767c'};font-size:.7rem">${label}</span>`;
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.remove('active'); n.classList.add('text-slate-400');
+  });
+  document.getElementById('page-' + page).classList.add('active');
+  const btn = document.querySelector(`[data-page="${page}"]`);
+  if (btn) { btn.classList.add('active'); btn.classList.remove('text-slate-400'); }
+  if (page === 'planner'  && !map)       initMap();
+  if (page === 'hotspots') { if (!hotspotMap) initHotspotMap(); loadHotspots(); }
+  if (page === 'history')  renderHistory();
+  if (page === 'analytics') renderAnalytics();
+  if (page === 'profile')  updateUserUI();
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+async function initDashboard() {
+  setApiStatus(false, 'Connecting to ML API…');
+
+  // 1. Fetch live ticker from backend (all cities at once)
+  const tickerData = await api('/aqi/ticker');
+  if (tickerData && tickerData.length) {
+    // Update LIVE_AQI cache with real values
+    tickerData.forEach(d => { if (d.city && d.aqi) LIVE_AQI[d.city] = d.aqi; });
+    renderTicker(tickerData);
+    setApiStatus(true, 'Live · OpenAQ + ML');
+  } else {
+    // Use fallback for ticker
+    const fallback = Object.entries(FALLBACK_AQI).map(([city,aqi]) => ({
+      city, aqi, category: aqiCat(aqi), color: aqiColor(aqi), source: 'Fallback'
+    }));
+    renderTicker(fallback);
+    setApiStatus(false, 'Demo mode — start backend');
+  }
+
+  // 2. Fetch Delhi AQI for hero stat
+  const delhiData = await api('/aqi/current/Delhi');
+  const delhiAQI = delhiData?.aqi ?? LIVE_AQI['Delhi'];
+  renderDashStat(delhiAQI, delhiData?.pm25, delhiData?.source);
+
+  // 3. Fetch 24h forecast for chart
+  await loadForecast(delhiData?.aqi);
+
+  // 4. City grid with live AQI
+  await renderCityGrid();
+
+  // 5. Hotspot count badge
+  const hData = await api('/hotspots/Delhi?aqi_threshold=120');
+  const count = hData?.hotspots?.length ?? 4;
+  const hEl = document.getElementById('dash-hotspots');
+  if (hEl) hEl.textContent = count;
+
+  // Auto-refresh every 5 minutes
+  setTimeout(initDashboard, 5 * 60 * 1000);
+}
+
+function renderTicker(items) {
+  const el = document.getElementById('ticker-bar');
+  if (!el) return;
+  const doubled = [...items, ...items];
+  el.innerHTML = doubled.map(d =>
+    `<span class="mx-8 text-sm font-headline font-black" style="color:${aqiColor(d.aqi)};opacity:.4">
+      ${d.city.toUpperCase()}: ${d.aqi}
+    </span>`
+  ).join('');
+}
+
+function renderDashStat(aqi, pm25, source) {
+  const aqiEl = document.getElementById('dash-aqi');
+  const catEl = document.getElementById('dash-cat');
+  const needleEl = document.getElementById('dash-needle');
+  if (aqiEl) { aqiEl.textContent = Math.round(aqi); aqiEl.style.color = aqiColor(aqi); }
+  if (catEl) { catEl.textContent = aqiCat(aqi);      catEl.style.color = aqiColor(aqi); }
+  if (needleEl) needleEl.style.left = Math.min(95, (aqi / 300) * 100) + '%';
+  // Show PM2.5 if available
+  const srcEl = document.getElementById('dash-source');
+  if (srcEl && source) srcEl.textContent = source.includes('Fallback') ? 'Estimated data' : '● ' + source.split('(')[0].trim();
+}
+
+async function loadForecast(currentAQI) {
+  const chartEl = document.getElementById('forecast-chart');
+  const loadEl  = document.getElementById('forecast-loading');
+
+  // Try real backend forecast
+  const data = await api('/aqi/forecast', {
+    method: 'POST',
+    body: JSON.stringify({ city: 'Delhi', hours_ahead: 24 }),
+  });
+
+  let forecasts = data?.forecasts;
+
+  // Show optimal departure time from ML model
+  if (data?.best_departure) {
+    const t = new Date(data.best_departure);
+    const label = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const depEl = document.getElementById('dash-departure');
+    if (depEl) depEl.textContent = label;
+    const srcLbl = data.data_source?.includes('real') ? '(real data)' : '(estimated)';
+    const depSrc = document.getElementById('dash-dep-src');
+    if (depSrc) depSrc.textContent = srcLbl;
+  }
+
+  // Fallback: generate synthetic diurnal forecast
+  if (!forecasts || !forecasts.length) {
+    const base = currentAQI ?? LIVE_AQI['Delhi'] ?? 162;
+    forecasts = Array.from({ length: 24 }, (_, i) => {
+      const h = (new Date().getHours() + i) % 24;
+      const diurnal = 40 * Math.sin((h - 8) * Math.PI / 12);
+      const aqi = Math.max(20, base + diurnal + (Math.random() - 0.5) * 15);
+      return { aqi: Math.round(aqi), timestamp: new Date(Date.now() + i * 3600000).toISOString() };
+    });
+  }
+
+  const maxAQI = Math.max(...forecasts.map(f => f.aqi));
+  if (chartEl) {
+    chartEl.innerHTML = forecasts.map(f => {
+      const h   = parseInt(f.timestamp.slice(11, 13));
+      const pct = Math.max(5, (f.aqi / maxAQI) * 100);
+      const col = aqiColor(f.aqi);
+      return `<div class="flex-1 flex flex-col items-center gap-1 group cursor-default"
+                   title="AQI ${f.aqi} at ${h}:00h">
+        <div class="w-full rounded-t-sm forecast-bar opacity-60 group-hover:opacity-100"
+             style="height:${pct}%;background:${col};min-height:4px"></div>
+      </div>`;
+    }).join('');
+  }
+  if (loadEl) loadEl.style.display = 'none';
+}
+
+async function renderCityGrid() {
+  const grid = document.getElementById('city-grid');
+  if (!grid) return;
+  const topCities = ['Delhi','Mumbai','Bengaluru','Kolkata','Chennai','Hyderabad','Jaipur','Pune'];
+
+  // Show skeleton first
+  grid.innerHTML = topCities.map(city => `
+    <div class="glass rounded-xl p-4 border border-slate-800/20">
+      <p class="text-[9px] font-label uppercase tracking-widest text-slate-500">${city}</p>
+      <div class="text-2xl font-black font-headline mt-1 text-slate-700">–</div>
+      <p class="text-[10px] font-label mt-0.5 text-slate-700">Loading…</p>
+    </div>`).join('');
+
+  // Fetch all at once via ticker (already cached in LIVE_AQI)
+  topCities.forEach(city => {
+    const aqi = LIVE_AQI[city] ?? FALLBACK_AQI[city] ?? 90;
+    const col = aqiColor(aqi);
+    const cards = grid.querySelectorAll('div.glass');
+    const idx   = topCities.indexOf(city);
+    if (cards[idx]) {
+      cards[idx].style.cursor = 'pointer';
+      cards[idx].onclick = () => {
+        document.getElementById('origin-select').value = city;
+        navigate('planner');
+      };
+      cards[idx].querySelector('.text-2xl').textContent = Math.round(aqi);
+      cards[idx].querySelector('.text-2xl').style.color = col;
+      cards[idx].querySelector('.text-\\[10px\\]').textContent = aqiCat(aqi);
+      cards[idx].querySelector('.text-\\[10px\\]').style.color = col;
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([28.52, 77.2], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO', maxZoom: 19,
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+}
+
+function initHotspotMap() {
+  hotspotMap = L.map('hotspot-map', { zoomControl: false }).setView([28.6139, 77.2090], 11);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+  }).addTo(hotspotMap);
+  L.control.zoom({ position: 'bottomright' }).addTo(hotspotMap);
+}
+
+// ═══════════════════════════════════════════
+// ROUTE PLANNER
+// ═══════════════════════════════════════════
+function initSelects() {
+  const cities = Object.keys(CITY_COORDS);
+  ['origin-select', 'dest-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = `<option value="">Select city…</option>` +
+      cities.map(c => `<option value="${c}">${c}</option>`).join('');
+  });
+  const os = document.getElementById('origin-select');
+  const ds = document.getElementById('dest-select');
+  if (os) os.value = 'Delhi';
+  if (ds) ds.value = 'Gurgaon';
+}
+
+async function findRoute() {
+  const origin = document.getElementById('origin-select')?.value;
+  const dest   = document.getElementById('dest-select')?.value;
+  if (!origin || !dest || origin === dest) return;
+
+  // Loading state
+  const btnIcon = document.getElementById('route-btn-icon');
+  const btnText = document.getElementById('route-btn-text');
+  if (btnIcon) btnIcon.className = 'spinner';
+  if (btnText) btnText.textContent = 'Optimizing…';
+
+  // Build health conditions array from checkboxes
+  const conditions = [];
+  if (document.getElementById('hc-asthma')?.checked)  conditions.push('asthma');
+  if (document.getElementById('hc-heart')?.checked)   conditions.push('heart_disease');
+  if (document.getElementById('hc-elderly')?.checked) conditions.push('elderly');
+  if (document.getElementById('hc-child')?.checked)   conditions.push('child');
+  if (!conditions.length) conditions.push('healthy_adult');
+  const activity = document.getElementById('activity-select')?.value ?? 'moderate';
+
+  // ── 1. Route optimization (OSRM + live AQI) ──
+  let routeData = await api('/routes/optimize', {
+    method: 'POST',
+    body: JSON.stringify({ origin, destination: dest }),
+  });
+  if (!routeData) routeData = buildFallbackRoutes(origin, dest);
+
+  // ── 2. Health assessment against origin AQI ──
+  const originAQI = routeData.origin_aqi ?? LIVE_AQI[origin] ?? 100;
+  let healthData = await api('/health/assess', {
+    method: 'POST',
+    body: JSON.stringify({ aqi: originAQI, conditions, age: currentUser?.age ?? 30, activity }),
+  });
+  if (!healthData) healthData = localHealthAssess(originAQI, conditions, activity);
+
+  renderRoutes(routeData, origin, dest);
+  renderHealthPanel(healthData);
+
+  // ── 3. Badge: show whether data is real or estimated ──
+  const srcBadge = routeData.road_data_source ?? '';
+  const isReal = srcBadge.includes('OSRM') || srcBadge.includes('real');
+  if (btnIcon) { btnIcon.className = 'material-symbols-outlined text-sm'; btnIcon.textContent = 'check'; }
+  if (btnText) btnText.textContent = isReal ? 'Live Route Found!' : 'Route Found (Demo)';
+  setTimeout(() => {
+    if (btnIcon) btnIcon.textContent = 'route';
+    if (btnText) btnText.textContent = 'Find Best Route';
+  }, 3000);
+
+  // ── 4. Save to history ──
+  if (routeData.routes?.length) {
+    const best = routeData.routes[0];
+    HISTORY.unshift({
+      origin, dest,
+      aqi:   best.avg_aqi,
+      dist:  best.distance_km,
+      saved: Math.round(10 + Math.random() * 20),
+      date:  new Date().toLocaleDateString('en-IN', { day:'numeric',month:'short',year:'numeric' })
+             + ' · ' + new Date().toLocaleTimeString('en-IN', { hour:'2-digit',minute:'2-digit' }),
+      status: best.aqi_category ?? aqiCat(best.avg_aqi),
+      color:  best.aqi_color    ?? aqiColor(best.avg_aqi),
+    });
+  }
+}
+
+// Local fallback route builder (used when OSRM is unavailable)
+function buildFallbackRoutes(origin, dest) {
+  const oAQI = LIVE_AQI[origin] ?? 100;
+  const dAQI = LIVE_AQI[dest]   ?? 100;
+  const oC = CITY_COORDS[origin], dC = CITY_COORDS[dest];
+  const dist = Math.round(Math.hypot((oC[0]-dC[0])*111, (oC[1]-dC[1])*111*Math.cos(oC[0]*Math.PI/180)));
+  const mid1 = [(oC[0]+dC[0])/2 + 0.05, (oC[1]+dC[1])/2 - 0.04];
+  const mid2 = [(oC[0]+dC[0])/2 - 0.03, (oC[1]+dC[1])/2 + 0.06];
+  return {
+    origin, destination: dest,
+    origin_aqi: oAQI, destination_aqi: dAQI,
+    road_data_source: 'Estimated (backend unavailable)',
+    routes: [
+      { label:'Clean Path',      type:'optimal', badge:'Cleanest',
+        avg_aqi:Math.round((oAQI+dAQI)/2*0.75), distance_km:dist+2, duration_min:Math.round(dist/30*60+10),
+        aqi_color:aqiColor((oAQI+dAQI)/2*0.75), aqi_category:aqiCat((oAQI+dAQI)/2*0.75), coordinates:[oC,mid1,dC] },
+      { label:'Direct Route',    type:'standard',
+        avg_aqi:Math.round((oAQI+dAQI)/2),      distance_km:dist,   duration_min:Math.round(dist/35*60),
+        aqi_color:aqiColor((oAQI+dAQI)/2),      aqi_category:aqiCat((oAQI+dAQI)/2),      coordinates:[oC,dC] },
+      { label:'Highway Express', type:'fast',    badge:'Fastest',
+        avg_aqi:Math.round((oAQI+dAQI)/2*1.3),  distance_km:dist+5, duration_min:Math.round(dist/50*60),
+        aqi_color:aqiColor((oAQI+dAQI)/2*1.3),  aqi_category:aqiCat((oAQI+dAQI)/2*1.3),  coordinates:[oC,mid2,dC] },
+    ],
+  };
+}
+
+function localHealthAssess(aqi, conditions, activity) {
+  const mult = conditions.includes('asthma')||conditions.includes('copd') ? 1.8
+             : conditions.includes('heart_disease') ? 1.6
+             : conditions.includes('elderly')       ? 1.4 : 1.0;
+  const actM = activity === 'high' ? 1.4 : activity === 'low' ? 0.8 : 1.0;
+  const eff  = aqi * mult * actM;
+  const recs = eff > 150 ? ['Limit outdoor time to 30 min.', 'Wear N95 mask outside.']
+             : eff > 100 ? ['Sensitive groups: limit outdoor activity.']
+             : ['Conditions acceptable for most activities.'];
+  if (conditions.includes('asthma')) recs.push('Carry your inhaler.');
+  recs.push('Cleanest window: 5–7 AM IST (AQI ~30% lower).');
+  return { input_aqi:aqi, effective_aqi:Math.round(eff), risk_level:aqiCat(eff),
+           risk_color:aqiColor(eff), mask_advised:eff>100, outdoor_safe:eff<=100, recommendations:recs };
+}
+
+function renderRoutes(data, origin, dest) {
+  if (!map) initMap();
+  if (routeLayer) map.removeLayer(routeLayer);
+  routeLayer = L.layerGroup().addTo(map);
+
+  const results = document.getElementById('route-results');
+  if (!results) return;
+  results.classList.remove('hidden');
+  results.innerHTML = '';
+
+  const oC = CITY_COORDS[origin], dC = CITY_COORDS[dest];
+  map.fitBounds([oC, dC], { padding: [30, 30] });
+
+  const mkr = col => `background:${col};width:14px;height:14px;border-radius:50%;border:3px solid #0a0f14;box-shadow:0 0 12px ${col}`;
+  L.marker(oC, { icon: L.divIcon({ html:`<div style="${mkr('#99f7ff')}"></div>`, className:'', iconAnchor:[7,7] }) })
+   .bindPopup(`<b>${origin}</b><br>AQI: ${data.origin_aqi}<br><small style="color:#888">${data.origin_aqi_src??''}</small>`).addTo(routeLayer);
+  L.marker(dC, { icon: L.divIcon({ html:`<div style="${mkr('#8eff71')}"></div>`, className:'', iconAnchor:[7,7] }) })
+   .bindPopup(`<b>${dest}</b><br>AQI: ${data.destination_aqi}`).addTo(routeLayer);
+
+  const dataSource = data.road_data_source ?? '';
+  const isRealRoads = dataSource.includes('OSRM');
+
+  data.routes.forEach((route, i) => {
+    const col    = route.aqi_color ?? aqiColor(route.avg_aqi);
+    const coords = route.coordinates ?? [oC, dC];
+    const lls    = coords.map(c => [c[0], c[1]]);
+    const style  = i === 0
+      ? { color:col, weight:5,   opacity:.9, dashArray:null }
+      : { color:col, weight:2.5, opacity:.5, dashArray:'6 6' };
+    L.polyline(lls, style)
+     .bindPopup(`<b>${route.label}</b><br>AQI: ${route.avg_aqi} · ${route.distance_km}km<br><small style="color:#888">${isRealRoads?'Real road geometry':'Estimated'}</small>`)
+     .addTo(routeLayer);
+
+    const isOpt = i === 0;
+    results.innerHTML += `
+    <div class="route-card glass rounded-2xl p-5 fade-in ${isOpt?'border-2':''}"
+         style="${isOpt?`border-color:${col}40;box-shadow:0 0 20px ${col}15`:''}">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          ${route.badge ? `<span class="text-[9px] font-label font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border"
+            style="color:${col};border-color:${col}40;background:${col}10">${route.badge}</span>` : ''}
+          <h4 class="font-headline font-bold text-base mt-2">${route.label}</h4>
+          <p class="text-[9px] font-label text-slate-600 mt-0.5">${isRealRoads?'Real road · OSRM':'Estimated path'}</p>
+        </div>
+        <div class="text-right">
+          <div class="text-3xl font-black font-headline" style="color:${col}">${route.avg_aqi}</div>
+          <div class="text-[10px] font-label" style="color:${col}">${route.aqi_category}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="bg-black/30 rounded-lg p-2.5">
+          <p class="text-[9px] font-label text-slate-500 uppercase tracking-widest">Distance</p>
+          <p class="font-headline font-bold">${route.distance_km}<span class="text-xs text-slate-400 font-normal ml-1">km</span></p>
+        </div>
+        <div class="bg-black/30 rounded-lg p-2.5">
+          <p class="text-[9px] font-label text-slate-500 uppercase tracking-widest">Duration</p>
+          <p class="font-headline font-bold">${route.duration_min}<span class="text-xs text-slate-400 font-normal ml-1">min</span></p>
+        </div>
+        <div class="bg-black/30 rounded-lg p-2.5">
+          <p class="text-[9px] font-label text-slate-500 uppercase tracking-widest">PM2.5 exp.</p>
+          <p class="font-headline font-bold">${route.pm25_est??Math.round(route.avg_aqi*0.6)}<span class="text-xs text-slate-400 font-normal ml-1">µg/m³</span></p>
+        </div>
+      </div>
+      <button class="w-full py-2 rounded-xl text-xs font-bold font-headline transition-all
+        ${isOpt?'glow-btn text-on-primary-fixed':'border border-slate-700/50 hover:border-primary/30 text-on-surface'}"
+        onclick="selectRoute('${route.label}', ${route.avg_aqi})">
+        ${isOpt ? 'Select This Route' : 'Compare'}
+      </button>
+    </div>`;
+  });
+}
+
+function selectRoute(label, aqi) {
+  // Could POST to a saved-routes backend endpoint here
+  const col = aqiColor(aqi);
+  const msg = document.createElement('div');
+  msg.style.cssText = `position:fixed;top:1rem;right:1rem;z-index:9999;padding:.75rem 1.25rem;
+    border-radius:.75rem;background:#0d1f3c;border:1px solid ${col}40;color:${col};
+    font-family:'Manrope',sans-serif;font-size:.8rem;font-weight:600;
+    animation:fadeIn .3s ease;box-shadow:0 0 20px ${col}20`;
+  msg.textContent = `✓ ${label} selected`;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 2500);
+}
+
+function renderHealthPanel(data) {
+  const panel = document.getElementById('health-panel');
+  if (!panel) return;
+  panel.classList.remove('hidden');
+  const iconEl = document.getElementById('health-icon');
+  const riskEl = document.getElementById('health-risk');
+  const recsEl = document.getElementById('health-recs');
+  if (iconEl) iconEl.style.color = data.risk_color;
+  if (riskEl) {
+    riskEl.style.color = data.risk_color;
+    riskEl.textContent = data.risk_level + (data.mask_advised ? ' · Mask advised' : '');
+  }
+  if (recsEl) {
+    recsEl.innerHTML = data.recommendations
+      .map(r => `<div class="flex items-start gap-1.5">
+        <span class="material-symbols-outlined text-xs mt-0.5 text-slate-500">chevron_right</span>
+        <span>${r}</span></div>`)
+      .join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// HOTSPOTS
+// ═══════════════════════════════════════════
+async function loadHotspots() {
+  const city = document.getElementById('hotspot-city')?.value;
+  if (!hotspotMap || !city) return;
+
+  hotspotMap.eachLayer(l => { if (!(l instanceof L.TileLayer)) hotspotMap.removeLayer(l); });
+  const c = CITY_COORDS[city] ?? [28.6, 77.2];
+  hotspotMap.setView(c, 12);
+
+  const listEl = document.getElementById('hotspot-list');
+  if (listEl) listEl.innerHTML = `
+    <div class="glass rounded-xl p-4 border border-slate-800/30">
+      <div class="spinner mx-auto"></div>
+      <p class="text-xs text-slate-500 text-center mt-2 font-label">Running DBSCAN on real sensors…</p>
+    </div>`;
+
+  // Fetch real hotspot data from backend (which uses OpenAQ sensors + DBSCAN)
+  let data = await api(`/hotspots/${city}`);
+  const isReal = data && data.data_source?.includes('OpenAQ');
+
+  if (!data) {
+    // Local fallback
+    data = buildFallbackHotspots(city);
+  }
+
+  // Source badge
+  const srcText = isReal ? '● OpenAQ real sensors' : '● Demo data';
+  const srcColor = isReal ? '#8eff71' : '#eab308';
+
+  // Render sensor dots
+  (data.all_sensors ?? []).forEach(s => {
+    const col = aqiColor(s.aqi);
+    L.circleMarker([s.lat, s.lon], { radius:3, fillColor:col, fillOpacity:.75, color:'transparent' })
+     .bindPopup(`<b>${s.sensor_id}</b><br>AQI: ${s.aqi}<br>PM2.5: ${s.pm25??'–'} µg/m³`)
+     .addTo(hotspotMap);
+  });
+
+  // Render hotspot cluster circles
+  (data.hotspots ?? []).forEach(h => {
+    L.circle(h.center, { radius:h.radius_km*1000, color:h.color, fillColor:h.color, fillOpacity:.12, weight:2 })
+     .bindPopup(`<b>Hotspot #${h.id}</b><br>Avg AQI: ${h.avg_aqi}<br>Sensors: ${h.sensor_count}`)
+     .addTo(hotspotMap);
+    // Center marker
+    L.circleMarker(h.center, { radius:6, fillColor:h.color, fillOpacity:1, color:'#0a0f14', weight:2 })
+     .bindPopup(`<b>Hotspot #${h.id}</b><br>${h.category}<br>Max AQI: ${h.max_aqi}`)
+     .addTo(hotspotMap);
+  });
+
+  if (listEl) {
+    const hasHotspots = data.hotspots?.length > 0;
+    const headerHtml = `<div class="flex items-center justify-between mb-2 px-1">
+      <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">${data.total_sensors??0} sensors scanned</span>
+      <span class="text-[9px] font-label font-bold" style="color:${srcColor}">${srcText}</span>
+    </div>`;
+    listEl.innerHTML = headerHtml + (hasHotspots
+      ? data.hotspots.map(h => `
+        <div class="glass rounded-xl p-4 border border-slate-800/20 fade-in">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[9px] font-label uppercase tracking-widest text-slate-500">Cluster #${h.id}</span>
+            <span class="text-xs font-bold font-label" style="color:${h.color}">${h.category}</span>
+          </div>
+          <div class="text-2xl font-black font-headline" style="color:${h.color}">${h.avg_aqi}</div>
+          <p class="text-[10px] text-slate-500 font-label mt-1">${h.sensor_count} sensors · ${h.radius_km}km radius</p>
+        </div>`).join('')
+      : '<div class="glass rounded-xl p-4 text-sm text-slate-500 font-label border border-slate-800/30">No major hotspots detected</div>');
+  }
+}
+
+function buildFallbackHotspots(city) {
+  const c = CITY_COORDS[city] ?? [28.6, 77.2];
+  return {
+    city,
+    data_source: 'Fallback',
+    total_sensors: 60,
+    hotspots: Array.from({ length:3 }, (_,i) => ({
+      id: i+1,
+      center: [c[0]+(i-1)*0.08, c[1]+(i%2===0?0.06:-0.06)],
+      radius_km: 0.8+i*0.3,
+      avg_aqi: 180-i*25, max_aqi: 220-i*20,
+      category: aqiCat(180-i*25), color: aqiColor(180-i*25),
+      sensor_count: 8+i*3,
+    })),
+    all_sensors: Array.from({ length:60 }, (_,i) => ({
+      sensor_id:`S${i}`, lat:c[0]+(Math.random()-.5)*0.3, lon:c[1]+(Math.random()-.5)*0.3,
+      aqi: Math.round(40+Math.random()*200), pm25: null,
+    })),
+  };
+}
+
+// ═══════════════════════════════════════════
+// ANALYTICS — uses live LIVE_AQI + backend historical
+// ═══════════════════════════════════════════
+async function renderAnalytics() {
+  // Fetch fresh ticker so analytics has real values
+  const tickerData = await api('/aqi/ticker');
+  if (tickerData?.length) tickerData.forEach(d => { if(d.city && d.aqi) LIVE_AQI[d.city] = d.aqi; });
+
+  // City AQI comparison bars
+  const compEl = document.getElementById('city-comparison');
+  if (compEl) {
+    const cities = ['Delhi','Kolkata','Lucknow','Jaipur','Mumbai','Hyderabad','Bengaluru','Mysore'];
+    const aqis   = cities.map(c => LIVE_AQI[c] ?? FALLBACK_AQI[c] ?? 90);
+    const maxAQI = Math.max(...aqis);
+    compEl.innerHTML = cities.map((city, idx) => {
+      const aqi = aqis[idx];
+      const col = aqiColor(aqi);
+      return `<div class="flex items-center gap-3">
+        <span class="text-xs font-label text-slate-400 w-24 text-right">${city}</span>
+        <div class="flex-1 bg-surface-variant rounded-full h-5 overflow-hidden">
+          <div class="h-full rounded-full flex items-center px-3 transition-all duration-700"
+               style="width:${(aqi/maxAQI)*100}%;background:${col}25;border:1px solid ${col}40">
+            <span class="text-[10px] font-bold font-label" style="color:${col}">${Math.round(aqi)}</span>
+          </div>
+        </div>
+        <span class="text-[10px] font-label w-20" style="color:${col}">${aqiCat(aqi)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Pollutant breakdown — try to fetch real pm25/pm10 from backend
+  const pollEl = document.getElementById('pollutant-chart');
+  if (pollEl) {
+    const topCities = ['Delhi','Mumbai','Bengaluru','Chennai','Kolkata'];
+    const rows = await Promise.all(topCities.map(async city => {
+      const d = await api(`/aqi/current/${city}`);
+      return {
+        city,
+        pm25: d?.pm25 ?? Math.round((LIVE_AQI[city]??100)*0.6),
+        pm10: d?.pm10 ?? Math.round((LIVE_AQI[city]??100)*0.85),
+        no2:  d?.no2,
+        real: !!d?.pm25,
+      };
+    }));
+    pollEl.innerHTML = rows.map(r => {
+      const ratio = r.pm25 / Math.max(r.pm10, 1);
+      return `<div>
+        <div class="flex justify-between text-[10px] font-label text-slate-500 mb-1">
+          <span>${r.city} ${r.real?'<span style="color:#8eff71;font-size:.6rem">● live</span>':''}</span>
+          <span>PM2.5: ${r.pm25} · PM10: ${r.pm10}${r.no2?` · NO₂: ${Math.round(r.no2)}`:''}  µg/m³</span>
+        </div>
+        <div class="flex gap-1 h-3">
+          <div class="rounded-full" style="width:${ratio*100}%;background:#99f7ff40;border:1px solid #99f7ff60"></div>
+          <div class="rounded-full flex-1"  style="background:#ff716c20;border:1px solid #ff716c40"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════
+function renderHistory() {
+  const listEl = document.getElementById('history-list');
+  if (!listEl) return;
+  listEl.innerHTML = HISTORY.map(h => `
+    <div class="glass rounded-2xl p-6 border border-slate-800/20 hover:border-primary/20 fade-in transition-all">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-headline font-bold text-lg flex items-center gap-2">
+            ${h.origin}
+            <span class="material-symbols-outlined text-primary text-sm">east</span>
+            ${h.dest}
+          </h3>
+          <p class="text-[10px] font-label text-slate-500 mt-0.5">${h.date}</p>
+        </div>
+        <span class="text-[9px] font-label font-bold uppercase tracking-widest px-3 py-1 rounded-full border"
+              style="color:${h.color};border-color:${h.color}40;background:${h.color}10">${h.status}</span>
+      </div>
+      <div class="flex gap-8">
+        <div>
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500">Avg AQI</p>
+          <p class="text-2xl font-black font-headline" style="color:${h.color}">${h.aqi}</p>
+        </div>
+        <div>
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500">Distance</p>
+          <p class="text-2xl font-black font-headline">${h.dist}<span class="text-xs font-normal text-slate-400 ml-1">km</span></p>
+        </div>
+        <div>
+          <p class="text-[9px] font-label uppercase tracking-widest text-slate-500">Exposure Saved</p>
+          <p class="text-2xl font-black font-headline text-primary">${h.saved}%</p>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+function switchAuthTab(tab) {
+  const isSignin = tab === 'signin';
+  document.getElementById('tab-signin')?.classList.toggle('active', isSignin);
+  document.getElementById('tab-signup')?.classList.toggle('active', !isSignin);
+  document.getElementById('form-signin')?.classList.toggle('hidden', !isSignin);
+  document.getElementById('form-signup')?.classList.toggle('hidden', isSignin);
+  document.getElementById('si-error')?.classList.remove('show');
+  document.getElementById('su-error')?.classList.remove('show');
+}
+
+function togglePwd(inputId, btn) {
+  const inp  = document.getElementById(inputId);
+  const icon = btn.querySelector('.material-symbols-outlined');
+  if (inp.type === 'password') { inp.type = 'text';     icon.textContent = 'visibility_off'; }
+  else                         { inp.type = 'password'; icon.textContent = 'visibility'; }
+}
+
+function checkStrength(pw) {
+  let score = 0;
+  if (pw.length >= 8)            score++;
+  if (/[A-Z]/.test(pw))          score++;
+  if (/[0-9]/.test(pw))          score++;
+  if (/[^A-Za-z0-9]/.test(pw))  score++;
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
+  const labels = ['Weak','Fair','Good','Strong'];
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById('str-'+i);
+    if (el) el.style.background = i <= score ? colors[score-1] : 'rgba(67,72,78,.3)';
+  });
+  const lbl = document.getElementById('str-label');
+  if (lbl) { lbl.textContent = pw.length > 0 ? labels[Math.max(0,score-1)] : '';
+             lbl.style.color  = pw.length > 0 ? colors[Math.max(0,score-1)] : ''; }
+}
+
+function fillDemo() {
+  const e = document.getElementById('si-email');
+  const p = document.getElementById('si-password');
+  if (e) e.value = 'demo@airshield.in';
+  if (p) p.value = 'demo123';
+  document.getElementById('si-error')?.classList.remove('show');
+}
+
+function handleSignIn() {
+  const email = document.getElementById('si-email')?.value.trim();
+  const pw    = document.getElementById('si-password')?.value;
+  const err   = document.getElementById('si-error');
+  const valid = (email === 'demo@airshield.in' && pw === 'demo123')
+             || (email?.includes('@') && pw?.length >= 6);
+  if (!valid) { err?.classList.add('show'); return; }
+  err?.classList.remove('show');
+  const name = email === 'demo@airshield.in' ? 'Demo User'
+    : email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  loginUser({ name, email, city:'Delhi', age:28,
+    initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() });
+}
+
+function handleSignUp() {
+  const name  = document.getElementById('su-name')?.value.trim();
+  const email = document.getElementById('su-email')?.value.trim();
+  const city  = document.getElementById('su-city')?.value;
+  const pw    = document.getElementById('su-password')?.value;
+  const err   = document.getElementById('su-error');
+  if (!name || !email?.includes('@') || !city || pw?.length < 6) {
+    if (err) { err.textContent = 'Please fill all fields (password min 6 chars).'; err.classList.add('show'); }
+    return;
+  }
+  err?.classList.remove('show');
+  loginUser({ name, email, city, age:25,
+    initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() });
+}
+
+function handleSocialLogin(provider) {
+  const data = provider === 'Google'
+    ? { name:'Priya Sharma', email:'priya@gmail.com', city:'Bengaluru', age:29, initials:'PS' }
+    : { name:'Dev User',     email:'dev@github.com',  city:'Hyderabad', age:26, initials:'DU' };
+  loginUser(data);
+}
+
+function loginUser(user) {
+  currentUser = user;
+  const authEl = document.getElementById('auth-screen');
+  if (authEl) { authEl.style.transition = 'opacity .4s ease'; authEl.style.opacity = '0'; }
+  setTimeout(() => { if (authEl) authEl.style.display = 'none'; }, 420);
+  updateUserUI();
+  initDashboard();
+}
+
+function handleSignOut() {
+  currentUser = null;
+  const authEl = document.getElementById('auth-screen');
+  if (authEl) {
+    authEl.style.display = 'flex'; authEl.style.opacity = '0';
+    requestAnimationFrame(() => { authEl.style.transition = 'opacity .4s ease'; authEl.style.opacity = '1'; });
+  }
+  const e = document.getElementById('si-email');
+  const p = document.getElementById('si-password');
+  if (e) e.value = ''; if (p) p.value = '';
+  switchAuthTab('signin');
+}
+
+// ═══════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════
+function updateUserUI() {
+  if (!currentUser) return;
+  const { name, initials, city, email, age } = currentUser;
+  const av = document.getElementById('topbar-avatar');
+  if (av) av.textContent = initials;
+  const map2 = { 'profile-name':name, 'profile-email-display':email,
+                 'pf-name-view':name, 'pf-city-view':city, 'pf-age-view':age, 'stat-routes':HISTORY.length };
+  Object.entries(map2).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.textContent = val; });
+  const pinit = document.getElementById('profile-avatar-initials');
+  if (pinit) pinit.textContent = initials;
+  const pcity = document.getElementById('profile-city-badge');
+  if (pcity) pcity.innerHTML = `<span class="material-symbols-outlined" style="font-size:.7rem">location_on</span> ${city}`;
+  ['name','city','age'].forEach(f => {
+    const el = document.getElementById('pf-'+f+'-edit');
+    if (el) el.value = currentUser[f];
+  });
+}
+
+let editMode = false;
+function toggleEditMode() {
+  editMode = !editMode;
+  ['name','age','city'].forEach(f => {
+    document.getElementById('pf-'+f+'-view')?.classList.toggle('hidden', editMode);
+    document.getElementById('pf-'+f+'-edit')?.classList.toggle('hidden', !editMode);
+  });
+  const editBtn = document.getElementById('edit-btn');
+  if (editBtn) editBtn.innerHTML = editMode
+    ? '<span class="material-symbols-outlined" style="font-size:.9rem">close</span> Cancel'
+    : '<span class="material-symbols-outlined" style="font-size:.9rem">edit</span> Edit';
+  document.getElementById('save-btn')?.classList.toggle('hidden', !editMode);
+}
+
+function saveProfile() {
+  if (!currentUser) return;
+  currentUser.name    = document.getElementById('pf-name-edit')?.value.trim() || currentUser.name;
+  currentUser.city    = document.getElementById('pf-city-edit')?.value || currentUser.city;
+  currentUser.age     = parseInt(document.getElementById('pf-age-edit')?.value) || currentUser.age;
+  currentUser.initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  updateUserUI();
+  if (editMode) toggleEditMode();
+  const btn = document.getElementById('save-btn');
+  if (btn) { btn.textContent = '✓ Saved!'; setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000); }
+}
+
+function updateHealthBadge() {
+  const conds = [];
+  if (document.getElementById('hp-asthma')?.checked)   conds.push('Asthma/COPD');
+  if (document.getElementById('hp-heart')?.checked)    conds.push('Heart Disease');
+  if (document.getElementById('hp-diabetes')?.checked) conds.push('Diabetes');
+  if (document.getElementById('hp-elderly')?.checked)  conds.push('Elderly');
+  if (document.getElementById('hp-pregnant')?.checked) conds.push('Pregnant');
+  const el    = document.getElementById('health-risk-text');
+  const badge = document.getElementById('health-risk-badge');
+  if (!el || !badge) return;
+  if (conds.length === 0) {
+    el.textContent = 'Standard · No elevated conditions';
+    el.style.color = '#99f7ff'; badge.style.borderColor = 'rgba(153,247,255,.15)';
+  } else {
+    el.textContent = 'Elevated · ' + conds.join(', ');
+    el.style.color = '#f97316'; badge.style.borderColor = 'rgba(249,115,22,.25)';
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initSelects();
+  // Auth screen visible by default; dashboard boots after login
+});
+</script>
+</body>
+</html>
