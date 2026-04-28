@@ -2,6 +2,22 @@
 ### Atmospheric Intelligence Platform — Full Stack with ML
 Live demo: https://sanya1205.github.io/AIRSHEILD/
 A real-world air quality navigation system that uses ML to find the cleanest routes across Indian cities. Built with FastAPI + scikit-learn/Prophet on the backend and a vanilla JS/Leaflet frontend matching your original design system.
+## 📸 Screenshots
+
+### Dashboard
+![Dashboard](Dashboard.png)
+
+### Route Planner
+![Route](route.png)
+
+### Analytics
+![Analytics](analytics.png)
+
+### Profile
+![Profile](Profile.png)
+
+### Hotspots
+![Hotspots](Hotspots.png)
 
 ---
 
